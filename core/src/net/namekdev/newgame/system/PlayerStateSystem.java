@@ -2,9 +2,9 @@ package net.namekdev.newgame.system;
 
 import static net.namekdev.newgame.system.TweenSystem.EntityTweenAccessor.*;
 import static aurelienribon.tweenengine.TweenEquations.*;
-
 import net.mostlyoriginal.api.plugin.extendedcomponentmapper.M;
 import net.namekdev.newgame.component.*;
+import net.namekdev.newgame.component.render.ZOrder;
 import net.namekdev.newgame.enums.C;
 import net.namekdev.newgame.enums.Tags;
 import net.namekdev.newgame.manager.AspectHelpers;
@@ -31,7 +31,8 @@ public class PlayerStateSystem extends BaseSystem {
 
 	AspectHelpers aspects;
 	CollisionSystem collisions;
-	DepthSystem depthSystem;
+//	DepthSystem depthSystem;
+	RenderSystem renderSystem;
 	TagManager tags;
 	TweenSystem tweens;
 
@@ -77,7 +78,7 @@ public class PlayerStateSystem extends BaseSystem {
 
 			rot.rotation = C.Player.WalkRotation * (walkTimer.isForward(0.5f) ? 1 : -1);
 			z.z = (int) pos.y;
-			depthSystem.dirtyOrder = true;
+			renderSystem.dirtyOrder = true;
 		}
 		else {
 			rot.rotation = 0;

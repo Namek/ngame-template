@@ -3,7 +3,6 @@ package net.namekdev.newgame.system;
 import net.mostlyoriginal.api.plugin.extendedcomponentmapper.M;
 import net.namekdev.newgame.component.Collider;
 import net.namekdev.newgame.component.Pos;
-import net.namekdev.newgame.component.Renderable;
 
 import com.artemis.Aspect;
 import com.artemis.Entity;
@@ -13,11 +12,10 @@ import com.artemis.utils.Bag;
 public class CollisionDebugSystem extends EntitySystem {
 	M<Collider> mCollider;
 	M<Pos> mPos;
-	M<Renderable> mRenderable;
 
 	CollisionSystem collisions;
 
-	public boolean enabled = false; 
+	public boolean enabled = false;
 
 
 	public CollisionDebugSystem() {
@@ -42,10 +40,10 @@ public class CollisionDebugSystem extends EntitySystem {
 				Entity e2 = (Entity) array[j];
 
 				if (collisions.overlapAABB(e1.getId(), e2.getId())) {
-					Renderable r1 = mRenderable.get(e1);
-					Renderable r2 = mRenderable.get(e2);
-					r1.debugFrame = true;
-					r2.debugFrame = true;
+//					Renderable r1 = mRenderable.get(e1);
+//					Renderable r2 = mRenderable.get(e2);
+//					r1.debugFrame = true;
+//					r2.debugFrame = true;
 				}
 			}
 		}

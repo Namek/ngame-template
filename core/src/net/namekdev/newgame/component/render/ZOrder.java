@@ -1,7 +1,12 @@
-package net.namekdev.newgame.component;
+package net.namekdev.newgame.component.render;
 
 import com.artemis.PooledComponent;
 
+/**
+ * Optional z axis for sorting. Sortes inside one {@link Layer}.
+ *
+ * @author Namek
+ */
 public class ZOrder extends PooledComponent {
 	public int z = 0;
 
@@ -9,4 +14,5 @@ public class ZOrder extends PooledComponent {
 	protected void reset() {
 		z = 0;
 	}
+
 }

@@ -1,15 +1,22 @@
 package net.namekdev.newgame.system;
 
 import net.mostlyoriginal.api.plugin.extendedcomponentmapper.M;
-import net.namekdev.newgame.component.*;
-import net.namekdev.newgame.enums.C;
-import net.namekdev.newgame.factory.EntityFactory;
+import net.namekdev.newgame.component.Colored;
+import net.namekdev.newgame.component.Origin;
+import net.namekdev.newgame.component.Pos;
+import net.namekdev.newgame.component.PosChild;
+import net.namekdev.newgame.component.Rotation;
+import net.namekdev.newgame.component.Scale;
+import net.namekdev.newgame.component.render.Layer;
+import net.namekdev.newgame.component.render.Renderable;
+import net.namekdev.newgame.component.render.RenderableChild;
+import net.namekdev.newgame.component.render.ZOrder;
 
 import com.artemis.Aspect;
-import com.artemis.BaseSystem;
-import com.artemis.Entity;
-import com.artemis.EntitySystem;
-import com.artemis.utils.Bag;
+import com.artemis.AspectSubscriptionManager;
+import com.artemis.BaseEntitySystem;
+import com.artemis.EntitySubscription;
+import com.artemis.EntitySubscription.SubscriptionListener;
 import com.artemis.utils.IntBag;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
@@ -18,148 +25,224 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
-import com.badlogic.gdx.math.Rectangle;
-import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.utils.NumberUtils;
+import com.badlogic.gdx.utils.LongArray;
 
 /**
- * Renders entities that are sorted by {@link DepthSystem}.
- * 
+ *
+ *
  * @author Namek
  */
-public class RenderSystem extends BaseSystem {
-	M<Collider> mCollider;
-	M<Colored> mColored;
-	M<Origin> mOrigin;
-	M<Pos> mPos;
-	M<PosChild> mPosChild;
-	M<Renderable> mRenderable;
-	M<Rotation> mRotation;
-	M<Scale> mScale;
-	
-	CameraSystem cameraSystem;
-	CollisionSystem collisions;
-	DepthSystem depthSystem;//companion system
-	EntityFactory entityFactory;
+public class RenderSystem extends BaseEntitySystem {
+	private M<Colored> mColored;
+	private M<Layer> mLayer;
+	private M<Origin> mOrigin;
+	private M<Pos> mPos;
+	private M<PosChild> mPosChild;
+	private M<Renderable> mRenderable;
+	private M<RenderableChild> mRenderableChild;
+	private M<Rotation> mRotation;
+	private M<Scale> mScale;
+	private M<ZOrder> mZOrder;
 
-	SpriteBatch batch;
-	ShapeRenderer shapes;
-	
-	final Rectangle tmpRect = new Rectangle();
-	private final Vector2 screenPos = new Vector2();
-	
-	private Color skyColor = new Color(0x7F99FFFF);
-	private Color grassColor = new Color(0x55CC45FF);
-	private Color nearGrassColor = new Color(0x05CC45FF);
-	
+	private CameraSystem cameraSystem;
 
+	public SpriteBatch sprites;
+	public ShapeRenderer shapes;
+
+	private LongArray sorted = new LongArray(100);
+	private int renderablesCount = 0;
+	private int renderableChildsCount = 0;
+
+	public boolean dirtyOrder = false;
+
+	private static final int TYPE_BITS_COUNT = 64;
+
+	/** long size minus 1 (most left bit is zero for sorting) */
+	private static final int META_BITS_COUNT = TYPE_BITS_COUNT - 1;
+
+	private static final int LAYER_BITS_COUNT = 10;
+
+	/** 0 - parent, 1 - child */
+	private static final int HIERARCHY_BITS_COUNT = 1;
+	private static final int ZORDER_BITS_COUNT = 11;
+	private static final int ENTITY_ID_BITS_COUNT
+		= META_BITS_COUNT - LAYER_BITS_COUNT - HIERARCHY_BITS_COUNT - ZORDER_BITS_COUNT;
+
+	private static final int EID_SHIFT = 0;
+	private static final int ZORDER_SHIFT = EID_SHIFT + ENTITY_ID_BITS_COUNT;
+	private static final int HIERARCHY_SHIFT = ZORDER_SHIFT + ZORDER_BITS_COUNT;
+	private static final int LAYER_SHIFT = HIERARCHY_SHIFT + HIERARCHY_BITS_COUNT;
+
+	public static final int NO_CHILDREN_SORT_ID = 0;
+	public static final int PARENT_SORT_ID = 0;
+	public static final int CHILD_SORT_ID = 1;
+
+
+	public RenderSystem() {
+		super(Aspect.all(Renderable.class));
+	}
 
 	@Override
 	protected void initialize() {
-		batch = new SpriteBatch();
+		AspectSubscriptionManager subscriptions = world.getAspectSubscriptionManager();
+		EntitySubscription renderableSub = subscriptions.get(Aspect.all(Renderable.class));
+		EntitySubscription renderableChildSub = subscriptions.get(Aspect.all(RenderableChild.class));
+
+		renderableSub.addSubscriptionListener(new SubscriptionListener() {
+			@Override
+			public void inserted(IntBag entities) {
+				renderablesCount += entities.size();
+				sorted.ensureCapacity(renderablesCount + renderableChildsCount);
+				dirtyOrder = true;
+			}
+			@Override
+			public void removed(IntBag entities) {
+				renderablesCount -= entities.size();
+				dirtyOrder = true;
+			}
+		});
+
+		renderableChildSub.addSubscriptionListener(new SubscriptionListener() {
+			@Override
+			public void inserted(IntBag entities) {
+				renderableChildsCount += entities.size();
+				sorted.ensureCapacity(renderablesCount + renderableChildsCount);
+				dirtyOrder = true;
+			}
+			@Override
+			public void removed(IntBag entities) {
+				renderableChildsCount -= entities.size();
+				dirtyOrder = true;
+			}
+		});
+
+		sprites = new SpriteBatch();
 		shapes = new ShapeRenderer();
 	}
 
 	@Override
+	protected void dispose() {
+		sprites.dispose();
+		shapes.dispose();
+	}
+
+	@Override
 	protected void processSystem() {
-        batch.setProjectionMatrix(cameraSystem.camera.combined);
+		if (dirtyOrder) {
+			refresh();
+			dirtyOrder = false;
+		}
+
+		sprites.setProjectionMatrix(cameraSystem.camera.combined);
 
 		Gdx.gl.glClearColor(0, 0, 1, 1f);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-		// first render game background
-		/*
-		final float sw = Gdx.graphics.getWidth();
-		final float sh = Gdx.graphics.getHeight();
-		final TextureRegion horizon = entityFactory.assets.horizon;
-		float w = horizon.getRegionWidth(), h = horizon.getRegionHeight();
-		shapes.begin(ShapeType.Filled);
 
-		shapes.setColor(skyColor);
-		float bottom = C.World.TopHorizonGraphicBottom;
-		cameraSystem.worldToScreen(screenPos.set(0, bottom));
-		shapes.rect(0, screenPos.y, sw, sh);
-		
-		shapes.setColor(grassColor);
-		cameraSystem.worldToScreen(screenPos.set(0, -C.World.ShakeHeightMax));
-		shapes.rect(0, screenPos.y, sw, bottom + C.World.ShakeHeightMax);
-		
-		shapes.setColor(nearGrassColor);
-		cameraSystem.worldToScreen(screenPos.set(0, C.World.LowerHorizonGraphicBottom));
-		shapes.rect(0, 0, sw, screenPos.y);
-		
-		shapes.end();
-
-		batch.begin();
-		batch.setColor(Color.WHITE);
-		batch.draw(horizon, 0, C.World.TopHorizonGraphicBottom);
-		batch.setColor(NumberUtils.intToFloatColor(0xffffff0e));
-		batch.draw(horizon, 0, C.World.LowerHorizonGraphicBottom, w/2, 0, w, h, -1, 1, 0);
-		*/
-
-		
-		batch.begin();
+		sprites.begin();
 		shapes.begin(ShapeType.Line);
-		
-		Integer[] entities = depthSystem.sortedEntities;
-		for (int i = 0, n = entities.length; i < n; i++) {
-			process(entities[i]);
+
+		final long[] metas = sorted.items;
+		for (int i = 0, n = sorted.size; i < n; ++i) {
+			final int e = (int)(metas[i] & ((1 << ENTITY_ID_BITS_COUNT) - 1));
+
+			Renderable renderable = mRenderable.get(e);
+
+			if (!renderable.visible) {
+				return;
+			}
+
+			Pos pos = mPos.get(e);
+			Scale scale = mScale.getSafe(e);
+			Origin origin = mOrigin.getSafe(e);
+			Rotation rot = mRotation.getSafe(e);
+
+			float scaleX = scale != null ? scale.x : 1f;
+			float scaleY = scale != null ? scale.y : 1f;
+			float originX = origin != null ? origin.x : Origin.DEFAULT_X;
+			float originY = origin != null ? origin.y : Origin.DEFAULT_Y;
+			float rotation = rot != null ? rot.rotation : 0;
+
+			if ((renderable.type & Renderable.SPRITE) != 0) {
+				TextureRegion img = renderable.sprite;
+				float w = img.getRegionWidth();
+				float h = img.getRegionHeight();
+
+				float x = pos.x, y = pos.y;
+				if (mPosChild.has(e)) {
+					Pos parentPos = mPos.get(world.getEntity(mPosChild.get(e).parent));
+					x += parentPos.x;
+					y += parentPos.y;
+				}
+
+				if (mColored.has(e)) {
+					Colored col = mColored.get(e);
+					sprites.setColor(col.color);
+				}
+				else {
+					sprites.setColor(Color.WHITE);
+				}
+
+				float ox = originX*w;
+				float oy = originY*h;
+
+				sprites.draw(img, x - ox, y - oy, ox, oy, w, h, scaleX, scaleY, rotation);
+
+//				if (renderable.debugFrame && mCollider.has(e)) {
+//					collisions.getRect(e, tmpRect);
+//					shapes.rect(tmpRect.x, tmpRect.y, tmpRect.width, tmpRect.height);
+//					renderable.debugFrame = false;
+//				}
+			}
+
+			if ((renderable.type & Renderable.FRAME_ANIM) != 0) {
+				// TODO
+			}
+
+			if ((renderable.type & Renderable.CUSTOM_RENDERER) != 0) {
+				 renderable.renderer.render(e, sprites, shapes);
+			}
 		}
 
-		batch.end();
+		sprites.end();
 		shapes.end();
 	}
 
-	protected void process(int e) {
-		Renderable renderable = mRenderable.get(e);
-		Pos pos = mPos.get(e);
-		Scale scale = mScale.getSafe(e);
-		Origin origin = mOrigin.getSafe(e);
-		Rotation rot = mRotation.getSafe(e);
-		
-		if (!renderable.visible) {
-			return;
-		}
-		
-		float scaleX = scale != null ? scale.x : 1f;
-		float scaleY = scale != null ? scale.y : 1f;
-		float originX = origin != null ? origin.x : Origin.DEFAULT_X;
-		float originY = origin != null ? origin.y : Origin.DEFAULT_Y;
-		float rotation = rot != null ? rot.rotation : 0;
-		
-		if (renderable.type == Renderable.Type.Sprite) {
-			TextureRegion img = renderable.sprite;
-			float w = img.getRegionWidth();
-			float h = img.getRegionHeight();
-			
-			float x = pos.x, y = pos.y;
-			if (mPosChild.has(e)) {
-				Pos parentPos = mPos.get(world.getEntity(mPosChild.get(e).parent));
-				x += parentPos.x;
-				y += parentPos.y;
+	private void refresh() {
+		final IntBag entities = getEntityIds();
+		final int[] data = entities.getData();
+
+		sorted.clear();
+
+		for (int i = 0, n = entities.size(); i < n; ++i) {
+			final int e = data[i];
+			Renderable renderable = mRenderable.get(e);
+
+			if (!renderable.visible) {
+				continue;
 			}
 
-			if (mColored.has(e)) {
-				Colored col = mColored.get(e);
-				batch.setColor(col.color);
-			}
-			else {
-				batch.setColor(Color.WHITE);
-			}
-			
-			float ox = originX*w;
-			float oy = originY*h;
+			RenderableChild renderableChild = mRenderableChild.getSafe(e);
+			Layer layer = mLayer.create(e);
+			ZOrder zorder = mZOrder.getSafe(e);
 
-			batch.draw(img, x - ox, y - oy, ox, oy, w, h, scaleX, scaleY, rotation);
-
-			if (renderable.debugFrame && mCollider.has(e)) {
-				collisions.getRect(e, tmpRect);
-				shapes.rect(tmpRect.x, tmpRect.y, tmpRect.width, tmpRect.height);
-				renderable.debugFrame = false;
+			int parenting = NO_CHILDREN_SORT_ID;
+			if (renderable.children != null) {
+				parenting = PARENT_SORT_ID;
 			}
+			else if (renderableChild != null) {
+				parenting = CHILD_SORT_ID;
+			}
+
+			long meta = (e << EID_SHIFT) | (parenting << HIERARCHY_SHIFT);
+			if (zorder != null) {
+				meta |= zorder.z << ZORDER_SHIFT;
+			}
+			meta |= layer.layer << LAYER_SHIFT;
+
+			sorted.add(meta);
 		}
-		else if (renderable.type == Renderable.Type.FrameAnim) {
-			
-		}
+
+		sorted.sort();
 	}
 }

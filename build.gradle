@@ -7,16 +7,19 @@ buildscript {
     dependencies {
         classpath 'de.richsource.gradle.plugins:gwt-gradle-plugin:0.6'
         classpath 'com.android.tools.build:gradle:1.2.3'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.0.0-beta-3595'
     }
 }
 
 allprojects {
     apply plugin: "eclipse"
     apply plugin: "idea"
+    apply plugin: "kotlin"
 
     version = '1.0'
     ext {
         appName = "ngame-template"
+        kotlin_version = '1.0.0-beta-3595'
         gdxVersion = '1.7.1'
         artemisVersion = '1.2.1'
         artemisContribVersion = '1.1.0'
@@ -107,6 +110,7 @@ project(":core") {
 
 
     dependencies {
+        compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
         compile "com.badlogicgames.gdx:gdx:$gdxVersion"
         compile "com.badlogicgames.gdx:gdx-ai:$aiVersion"
         compile "com.badlogicgames.gdx:gdx-controllers:$gdxVersion"

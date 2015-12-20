@@ -1,0 +1,17 @@
+{
+    "platform": "windows32",
+    "jdk": "openjdk-1.7.0-u80-unofficial-windows-i586-image.zip",
+    "executable": "jay",
+    "classpath": [
+        "build/jay.jar"
+    ],
+    "mainclass": "net.namekdev.growing_love_garden.desktop.DesktopLauncher",
+    "vmargs": [
+       "-Xmx1G"
+    ],
+    "resources": [
+        "core/assets"
+    ],
+    "minimizejre": "hard",
+    "outdir": "build-package"
+}

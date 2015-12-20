@@ -1,0 +1,1 @@
+java -jar packr.jar package_desktop.json

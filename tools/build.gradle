@@ -1,0 +1,96 @@
+apply from: "$rootDir/tools/fix-packages.gradle"
+
+task fixPackages {
+	fixPackages('core/src')
+	fixPackages('desktop/src')
+	fixPackages('html/src')
+	fixPackages('android/src')
+
+
+	// TODO
+	// Fix core/src/MyNGame.gwt.xml:
+	//   <source path="net/namekdev/newgame" />
+	//     ^ set it to path of folder of file net/namekdev/newgame/MyNGame.java
+	//       or if not found then do heuristic - look for core/src/* file where `extends ApplicationAdapter`!
+
+
+
+
+	// Fix package name in `desktop/build.gradle` file:
+	//	project.ext.mainClassName = "net.namekdev.newgame.desktop.DesktopLauncher"
+	def desktopLauncherClass = 'DesktopLauncher'
+	def cfgFilename = 'build.gradle'
+
+	findFile('desktop/src', desktopLauncherClass+'.java') { launcherFolderPath, file ->
+		def newPackage = fileToPackage(launcherFolderPath, file)
+
+		findFile('desktop', cfgFilename) { cfgFolderPath, cfgFile ->
+			def lineRegex = ~/project\.ext\.mainClassName = .+/
+			def newLine = 'project.ext.mainClassName = "' + newPackage + '.' + desktopLauncherClass + '"'
+			def newContent = lineRegex.matcher(cfgFile.text).replaceFirst(newLine)
+			def hasChanged = !newContent.equals(cfgFile.text)
+
+			println ' * ' + cfgFilename + ':'
+			if (hasChanged) {
+				cfgFile.write(newContent)
+				println ' -> '
+			}
+			else print ' x) '
+
+			println newLine
+		}
+		println ""
+	}
+
+	tryFindFile('html/src', 'GdxDefinition.gwt.xml') { xmlFolderPath, defFile ->
+		def defFilePackage = fileToPackage(xmlFolderPath, defFile)
+
+		// fix xml: entry-point
+		def launcherFilename = 'HtmlLauncher.java'
+		findFile('html/src', launcherFilename) { launcherFolderPath, launcherFile ->
+			def lineRegex = ~/<entry-point class=.+HtmlLauncher.+>/
+			def foundPackage = fileToPackage(launcherFolderPath, launcherFile)
+			def newLine = "<entry-point class=\'" + foundPackage + '.HtmlLauncher\' />'
+			def newContent = lineRegex.matcher(defFile.text).replaceFirst(newLine)
+			def hasChanged = !newContent.equals(defFile.text)
+
+			println ' * ' + launcherFilename + ':'
+			if (hasChanged) {
+				defFile.write(newContent)
+				println ' -> '
+			}
+			else print ' x) '
+
+			println newLine
+		}
+		println ""
+
+
+		// Fix 'html/build.gradle':
+		//  * modules 'net.namekdev.newgame.GdxDefinition'
+		//  * devModules 'net.namekdev.newgame.GdxDefinitionSuperdev'
+		def modulesRegex = ~/modules '.+/
+		findFileAndModifyLine('html', 'build.gradle', modulesRegex) {
+			matchedPart, folderPath, theFile ->
+			return "modules '" + defFilePackage + ".GdxDefinition'"
+		}
+
+		def devModulesRegex = ~/devModules '.+/
+		findFileAndModifyLine('html', 'build.gradle', devModulesRegex) {
+			matchedPart, folderPath, theFile ->
+			return "devModules '" + defFilePackage + ".GdxDefinitionSuperdev'"
+		}
+
+		//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		// TODO fix GdxDefinition -> all <inherits>
+		//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+	}
+
+	// TODO!!!
+	// fix GdxDefinitionSuperdev only:
+	//   <inherits name='net.namekdev.newgame.GdxDefinition' />
+	//tryFindFile('html/src', 'GdxDefinitionSuperdev.gwt.xml')
+
+}
+

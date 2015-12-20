@@ -1,0 +1,146 @@
+def fixPackages(folderName) {
+	def topFolderPath = folderNameToPath(folderName)
+	def packageRegex = ~/package\s+.+;/
+
+	println " * Scanning: " + topFolderPath + "\n"
+
+	new File(folderName).eachFileRecurse(groovy.io.FileType.FILES) {
+		if (!it.name.endsWith('.java')) {
+			return
+		}
+
+		println " :: " + topFolderPath.relativize(it.getAbsoluteFile().toPath())
+		def relPath = fileToRelPath(topFolderPath, it)
+		def newPackage = relPathToPackage(relPath)
+		print " -> " + newPackage
+
+		def newPackageLine = 'package ' + newPackage + ';'
+
+		// first check if there's anything to change,
+		// we don't want to touch the file needlessly
+		def needChange = false
+		it.eachLine(0) { line, lineNo ->
+			def match = packageRegex.matcher(line)
+			if (match.matches()) {
+				def newLine = match.replaceFirst(newPackageLine)
+				needChange = !newLine.equals(line)
+				return
+			}
+		}
+
+		if (needChange) {
+			def newContent = packageRegex.matcher(it.text).replaceFirst(newPackageLine)
+			it.write(newContent)
+			println ""
+		}
+		else {
+			println " (no fix)"
+		}
+	}
+
+	println ""
+}
+
+def tryFixPackages(folderName) {
+	def f = new File(folderName).getAbsoluteFile()
+
+	if (f.isDirectory()) {
+		fixPackages(folderName)
+	}
+	else {
+		println "\n * Skipping non-existing: " + folderName + "\n"
+	}
+}
+
+def folderNameToPath(folderName) {
+	return new File(folderName).getAbsoluteFile().toPath()
+}
+
+def fileToRelPath(topFolderPath, file) {
+	def filePath = topFolderPath.relativize(file.getAbsoluteFile().toPath())
+	def folderPath = file.getParentFile().getAbsoluteFile().toPath()
+	return topFolderPath.relativize(folderPath).toString()
+}
+
+def relPathToPackage(relPath) {
+	return relPath.replace('\\', '/').replace('/', '.')
+}
+
+def fileToPackage(topFolderPath, file) {
+	return relPathToPackage(fileToRelPath(topFolderPath, file))
+}
+
+def findFileAnd(folderName, fileName, shouldThrowWhenNotFound, Closure whenFileFound) {
+	def file = new File(folderName).getAbsoluteFile()
+	def topFolderPath = file.toPath()
+
+	if (shouldThrowWhenNotFound && !file.isDirectory()) {
+		throw new RuntimeException("There is no folder: " + folderName)
+	}
+
+	def found = false
+
+	new File(folderName).eachFileRecurse(groovy.io.FileType.FILES) {
+		if (!it.name.equals(fileName)) {
+			return
+		}
+
+		whenFileFound(topFolderPath, it)
+		found = true
+	}
+
+	if (!found && shouldThrowWhenNotFound) {
+		throw new RuntimeException("Couldn't find file `" + fileName + "` in: " + folderName)
+	}
+
+	return found
+}
+
+def findFile(folderName, fileName, Closure whenFileFound) {
+	findFileAnd(folderName, fileName, true, whenFileFound)
+}
+
+def tryFindFile(folderName, fileName, Closure whenFileFound) {
+	return findFileAnd(folderName, fileName, false, whenFileFound)
+}
+
+def findFileAndModifyLine(folder, filename, lineRegex, Closure replaceMatch) {
+	findFile(folder, filename) { folderPath, theFile ->
+		def needChange = false
+		def newLine = null
+		def replacement = null
+
+		theFile.eachLine(0) { line, lineNo ->
+			def match = lineRegex.matcher(line)
+
+			if (match.find()) {
+				def matchedPart = match.group(0)
+				replacement = replaceMatch(matchedPart, folderPath, theFile)
+				newLine = line.replace(matchedPart, replacement)
+				needChange = !matchedPart.equals(replacement)
+				return
+			}
+		}
+
+		println ' * ' + filename + ':'
+
+		if (needChange) {
+			def newContent = lineRegex.matcher(theFile.text).replaceFirst(replacement)
+			theFile.write(newContent)
+			print ' -> '
+		}
+		else print ' x) '
+
+		println replacement + "\n"
+	}
+}
+
+ext {
+	fixPackages = this.&tryFixPackages
+	findFile = this.&findFile
+	findFileAndModifyLine = this.&findFileAndModifyLine
+	tryFindFile = this.&tryFindFile
+	fileToPackage = this.&fileToPackage
+}
+
+			

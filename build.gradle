@@ -114,7 +114,7 @@ project(":core") {
         compile "net.mostlyoriginal.artemis-odb:contrib-eventbus:$artemisContribVersion"
         compile "net.mostlyoriginal.artemis-odb:contrib-plugin-operations:$artemisContribVersion"
         
-        compile "net.namekdev.entity_tracker:artemis-entity-tracker:0.3.0"
+        //compile "net.namekdev.entity_tracker:artemis-entity-tracker:0.3.0"
         //compile "net.namekdev.entity_tracker:artemis-entity-tracker-gui:0.3.0"
     }
 }

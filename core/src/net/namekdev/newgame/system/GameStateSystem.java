@@ -24,7 +24,7 @@ public class GameStateSystem extends BaseSystem {
 	@Override
 	protected void processSystem() {
 		float dt = world.getDelta();
-		gameState.levelTimeProgress += dt * C.Levels.ProgressingSpeed[gameState.levelIndex];
+//		gameState.levelTimeProgress += dt * C.Levels.ProgressingSpeed[gameState.levelIndex];
 		
 		if (gameState.levelTimeProgress >= 1f) {
 			gameState.levelTimeProgress = 1f;

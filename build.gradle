@@ -61,6 +61,7 @@ project(":android") {
         compile "com.badlogicgames.gdx:gdx-ai:$aiVersion"
         compile "com.badlogicgames.gdx:gdx-controllers:$gdxVersion"
         compile "com.badlogicgames.gdx:gdx-controllers-android:$gdxVersion"
+		compile fileTree(dir: '../libs', include: '*.jar')
     }
 }
 
@@ -113,8 +114,8 @@ project(":core") {
         compile "net.mostlyoriginal.artemis-odb:contrib-core:$artemisContribVersion"
         compile "net.mostlyoriginal.artemis-odb:contrib-eventbus:$artemisContribVersion"
         compile "net.mostlyoriginal.artemis-odb:contrib-plugin-operations:$artemisContribVersion"
-        
-        //compile "net.namekdev.entity_tracker:artemis-entity-tracker:0.3.0"
+        compile fileTree(dir: '../libs', include: '*.jar')
+        compile "net.namekdev.entity_tracker:artemis-entity-tracker:0.3.0"
         //compile "net.namekdev.entity_tracker:artemis-entity-tracker-gui:0.3.0"
     }
 }

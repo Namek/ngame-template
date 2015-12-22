@@ -3,6 +3,7 @@ package net.namekdev.newgame.factory;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 import net.namekdev.newgame.Assets;
 import net.namekdev.newgame.component.Collider;
+import net.namekdev.newgame.component.Colored;
 import net.namekdev.newgame.component.Pos;
 import net.namekdev.newgame.component.Renderable;
 import net.namekdev.newgame.component.Rotation;
@@ -37,6 +38,7 @@ public class EntityFactory extends PassiveSystem {
 		e.create(Scale.class);
 		e.create(Rotation.class);
 		e.create(ZOrder.class);
+		e.create(Colored.class);
 		
 		return player;
 	}

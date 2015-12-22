@@ -1,12 +1,20 @@
 package net.namekdev.newgame.system;
 
+import static net.namekdev.newgame.system.TweenSystem.EntityTweenAccessor.*;
+import static aurelienribon.tweenengine.TweenEquations.*;
+
 import net.mostlyoriginal.api.plugin.extendedcomponentmapper.M;
 import net.namekdev.newgame.component.*;
 import net.namekdev.newgame.enums.C;
 import net.namekdev.newgame.enums.Tags;
 import net.namekdev.newgame.manager.AspectHelpers;
+import net.namekdev.newgame.system.TweenSystem.EntityTweenAccessor;
+import net.namekdev.newgame.system.TweenSystem.TimelineInitializer;
 import net.namekdev.newgame.util.ActionTimer;
 import net.namekdev.newgame.util.ActionTimer.TimerState;
+import aurelienribon.tweenengine.Timeline;
+import aurelienribon.tweenengine.Tween;
+import aurelienribon.tweenengine.TweenEquations;
 
 import com.artemis.BaseSystem;
 import com.artemis.Entity;
@@ -25,6 +33,7 @@ public class PlayerStateSystem extends BaseSystem {
 	CollisionSystem collisions;
 	DepthSystem depthSystem;
 	TagManager tags;
+	TweenSystem tweens;
 
 	Input input;
 
@@ -40,7 +49,7 @@ public class PlayerStateSystem extends BaseSystem {
 	protected void processSystem() {
 		float dt = world.getDelta();
 
-		Entity e = tags.getEntity(Tags.Player);
+		final Entity e = tags.getEntity(Tags.Player);
 		Pos pos = mPos.get(e);
 		Rotation rot = mRotation.get(e);
 		Scale scale = mScale.get(e);
@@ -76,7 +85,20 @@ public class PlayerStateSystem extends BaseSystem {
 
 		if (input.isKeyJustPressed(Keys.SPACE)) {
 			// TODO jump or whatever
+
+			tweens.parallel(new TimelineInitializer() {
+				@Override
+				public void init(Timeline timeline) {
+					timeline.beginSequence()
+						.push(Tween.to(e, COLOR_R, 0.4f).target(0.4f).ease(easeOutSine).delay(0.2f))
+						.push(Tween.to(e, COLOR_R, 0.4f).target(1f).ease(easeOutSine))
+					.end()
+					.beginSequence()
+						.push(Tween.to(e, SCALE, 0.4f).target(0.8f, 0.8f).ease(easeOutSine).delay(0.2f))
+						.push(Tween.to(e, SCALE, 0.4f).target(1f, 1f).ease(easeOutSine))
+					.end();
+				}
+			});
 		}
 	}
-
 }

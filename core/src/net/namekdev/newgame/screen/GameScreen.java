@@ -21,6 +21,7 @@ import net.namekdev.newgame.system.GameStateSystem;
 import net.namekdev.newgame.system.PlayerStateSystem;
 import net.namekdev.newgame.system.RenderSystem;
 import net.namekdev.newgame.system.SchedulerSystem;
+import net.namekdev.newgame.system.TweenSystem;
 
 import com.artemis.BaseSystem;
 import com.artemis.SystemInvocationStrategy;
@@ -53,6 +54,7 @@ public class GameScreen extends BaseScreen<GameScreen> {
 			.with(new TagManager())
 	
 			// loop systems
+			.with(new TweenSystem())
 			.with(new GameStateSystem())
 			.with(new PlayerStateSystem())
 			.with(new CollisionSystem())

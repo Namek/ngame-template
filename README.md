@@ -48,7 +48,9 @@ Simply put your textures into `2_to_join` and run `pack.bat` which automatically
 `android/assets`.
 
 
-Packaging
----------
+Packaging with built-in JRE
+---------------------------
 
-Win32 build with built-in JRE: call `package_desktop.bat` which builds into folder... TODO
+For packaging Desktop version with built-in download [packr.jar](https://github.com/libgdx/packr) and put it into root folder.
+
+Win32 build with built-in JRE: call `package_desktop.bat` which builds into folder `build-package` (configured in `package_desktop.json`).

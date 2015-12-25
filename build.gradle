@@ -22,6 +22,7 @@ buildscript {
         classpath 'de.richsource.gradle.plugins:gwt-gradle-plugin:0.6'
         classpath 'com.android.tools.build:gradle:1.2.3'
         classpath "net.onedaybeard.artemis:artemis-odb-gradle-plugin:$artemisVersion"
+        classpath 'me.tatarka:gradle-retrolambda:3.2.4'
     }
 }
 
@@ -40,6 +41,7 @@ allprojects {
 
 project(":desktop") {
     apply plugin: "java"
+    apply plugin: 'me.tatarka.retrolambda'
 
 
     dependencies {
@@ -54,6 +56,7 @@ project(":desktop") {
 
 project(":android") {
     apply plugin: "android"
+    apply plugin: 'me.tatarka.retrolambda'
 
     configurations { natives }
 
@@ -101,6 +104,7 @@ project(":html") {
 
 project(":core") {
     apply plugin: "java"
+	apply plugin: 'me.tatarka.retrolambda'
 
 
 	configurations {

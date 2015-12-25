@@ -87,18 +87,15 @@ public class PlayerStateSystem extends BaseSystem {
 		if (input.isKeyJustPressed(Keys.SPACE)) {
 			// TODO jump or whatever
 
-			tweens.parallel(new TimelineInitializer() {
-				@Override
-				public void init(Timeline timeline) {
-					timeline.beginSequence()
-						.push(Tween.to(e, COLOR_R, 0.4f).target(0.4f).ease(easeOutSine).delay(0.2f))
-						.push(Tween.to(e, COLOR_R, 0.4f).target(1f).ease(easeOutSine))
-					.end()
-					.beginSequence()
-						.push(Tween.to(e, SCALE, 0.4f).target(0.8f, 0.8f).ease(easeOutSine).delay(0.2f))
-						.push(Tween.to(e, SCALE, 0.4f).target(1f, 1f).ease(easeOutSine))
-					.end();
-				}
+			tweens.parallel((Timeline timeline) -> {
+				timeline.beginSequence()
+					.push(Tween.to(e, COLOR_R, 0.4f).target(0.4f).ease(easeOutSine).delay(0.2f))
+					.push(Tween.to(e, COLOR_R, 0.4f).target(1f).ease(easeOutSine))
+				.end()
+				.beginSequence()
+					.push(Tween.to(e, SCALE, 0.4f).target(0.8f, 0.8f).ease(easeOutSine).delay(0.2f))
+					.push(Tween.to(e, SCALE, 0.4f).target(1f, 1f).ease(easeOutSine))
+				.end();
 			});
 		}
 	}

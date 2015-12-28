@@ -19,10 +19,10 @@ buildscript {
     }
 
     dependencies {
+		classpath 'me.tatarka:gradle-retrolambda:3.2.4'
         classpath 'de.richsource.gradle.plugins:gwt-gradle-plugin:0.6'
         classpath 'com.android.tools.build:gradle:1.2.3'
         classpath "net.onedaybeard.artemis:artemis-odb-gradle-plugin:$artemisVersion"
-        classpath 'me.tatarka:gradle-retrolambda:3.2.4'
     }
 }
 
@@ -41,7 +41,7 @@ allprojects {
 
 project(":desktop") {
     apply plugin: "java"
-    apply plugin: 'me.tatarka.retrolambda'
+    //apply plugin: 'me.tatarka.retrolambda'
 
 
     dependencies {
@@ -56,7 +56,7 @@ project(":desktop") {
 
 project(":android") {
     apply plugin: "android"
-    apply plugin: 'me.tatarka.retrolambda'
+    //apply plugin: 'me.tatarka.retrolambda'
 
     configurations { natives }
 
@@ -73,6 +73,7 @@ project(":android") {
 }
 
 project(":html") {
+    //apply plugin: 'me.tatarka.retrolambda'
     apply plugin: "gwt"
     apply plugin: "war"
 
@@ -95,11 +96,15 @@ project(":html") {
         compile "net.onedaybeard.artemis:artemis-odb:$artemisVersion:sources"
         compile "net.onedaybeard.artemis:artemis-odb-serializer-json-libgdx:$artemisVersion:sources"
         
-         // Artemis-odb bonus functionality (systems, events, components).
+        // Artemis-odb bonus functionality (systems, events, components).
         compile "net.mostlyoriginal.artemis-odb:contrib-core:$artemisContribVersion:sources"
         compile "net.mostlyoriginal.artemis-odb:contrib-eventbus:$artemisContribVersion:sources"
         compile "net.mostlyoriginal.artemis-odb:contrib-plugin-operations:$artemisContribVersion:sources"
     }
+}
+
+project(":teavm") {
+
 }
 
 project(":core") {
